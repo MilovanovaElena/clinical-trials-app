@@ -1,0 +1,128 @@
+{% extends 'doctor_app/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        {% if show_result %}
+        <div class="alert {% if is_normal %}alert-success{% else %}alert-warning{% endif %} mt-3">
+            <h4>📊 Результат анализа самочувствия:</h4>
+            <div class="mb-3">
+                <strong>Данные пациента:</strong><br>
+                • ID пациента: <strong>{{ patient_id }}</strong><br>
+                • Исследование: <strong>{{ study_name }}</strong><br>
+                • Препарат: <strong>{{ drug_taken }}</strong><br>
+                • Оценка самочувствия: <strong>{{ condition_score }} баллов</strong>
+            </div>
+
+            <div class="mb-3">
+                <strong>Анализ данных:</strong><br>
+                {{ analysis_result }}
+            </div>
+
+            {% if analysis_details %}
+            <hr>
+            <div class="mt-2">
+                <small class="text-muted">
+                    <strong>Детали расчета:</strong><br>
+                    • Среднее значение по препарату: <strong>{{ analysis_details.average_score }} баллов</strong><br>
+                    • Диапазон нормы (±10%): <strong>{{ analysis_details.lower_bound }} - {{ analysis_details.upper_bound }} баллов</strong><br>
+                    • Ваша оценка: <strong>{{ analysis_details.current_score }} баллов</strong><br>
+                    • Статус: <strong>{% if analysis_details.is_in_range %}в норме{% else %}вне нормы{% endif %}</strong>
+                </small>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">
+            <h4>❌ Ошибка:</h4>
+            <p>{{ error }}</p>
+        </div>
+        {% endif %}
+
+        {% if success_message %}
+        <div class="alert alert-success mt-3">
+            <h4>✅ Успех!</h4>
+            <p>{{ success_message }}</p>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0 text-center">Система сбора данных клинического исследования</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" id="dataForm">
+                    {% csrf_token %}
+
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="alert alert-danger mt-1">
+                            {% for error in field.errors %}
+                            <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-primary w-100">Сохранить и проанализировать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const studySelect = document.getElementById('id_study');
+    const drugSelect = document.getElementById('id_drug');
+
+    // Данные о препаратах из контекста Django
+    const studiesData = {{ studies_data|safe }};
+
+    function updateDrugOptions() {
+        const studyId = studySelect.value;
+        drugSelect.innerHTML = '';
+
+        if (studyId && studiesData[studyId]) {
+            const study = studiesData[studyId];
+            const drugName = study.drug_name;
+
+            // Добавляем пустой вариант
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = '--- Выберите препарат ---';
+            drugSelect.appendChild(emptyOption);
+
+            // Добавляем Плацебо
+            const placeboOption = document.createElement('option');
+            placeboOption.value = 'Плацебо';
+            placeboOption.textContent = 'Плацебо';
+            drugSelect.appendChild(placeboOption);
+
+            // Добавляем настоящий препарат из исследования
+            const drugOption = document.createElement('option');
+            drugOption.value = drugName;
+            drugOption.textContent = drugName;
+            drugSelect.appendChild(drugOption);
+        } else {
+            const emptyOption = document.createElement('option');
+            emptyOption.value = '';
+            emptyOption.textContent = '--- Сначала выберите исследование ---';
+            drugSelect.appendChild(emptyOption);
+        }
+    }
+
+    // Обработчик изменения исследования
+    studySelect.addEventListener('change', updateDrugOptions);
+
+    // Инициализация при загрузке страницы
+    updateDrugOptions();
+});
+</script>
+{% endblock %}
