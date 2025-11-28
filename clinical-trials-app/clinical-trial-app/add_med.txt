@@ -1,3 +1,0 @@
-Миграция для добавления поля med в таблицу trials
-Файл: src/task2/doctor_app/migrations/0002_initial.py
-SQL команда: ALTER TABLE trials ADD COLUMN med VARCHAR(100);
